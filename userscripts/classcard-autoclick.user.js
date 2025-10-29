@@ -20,7 +20,7 @@
     'div[style*="overflow-wrap: break-word"]',
   ];
   const OPTIONS_CONTAINER_SELECTOR = null; // 알면 '.choices', '#answerArea' 등으로 지정
-  const INTERVAL_MS = 200; // 시도 주기 (더 빠르게)
+  const INTERVAL_MS = 800; // 시도 주기 (안정적으로)
   const DEBUG = true;
   // 선택적으로 이중어 사전을 제공하면 정확하게 매칭됩니다.
   // 예) window.__CLASSCARD_AUTOCLICKER__.dict.setPairs([
@@ -30,48 +30,48 @@
     e2k: new Map(), // english -> korean
     k2e: new Map(), // korean -> english
   };
-  // 기본 세트(중2 동아 Lesson 8) 일부 사전 시드
+  // 새로운 단어 세트
   const DICT_SEED = {
-    'afraid': '걱정하는, 두려워하는',
-    'anyway': '어차피',
-    'broken': '깨진, 부서진',
-    'bronze': '청동',
-    'carry': '나르다, 옮기다',
-    'clue': '단서, 실마리',
-    'crime': '범죄',
-    'dangerous': '위험한',
-    'detective': '탐정',
-    'else': '또 다른',
-    'favor': '호의, 친절; 부탁',
-    'feather': '깃털',
-    'flash': '섬광, 번쩍임',
-    'footprint': '발자국',
-    'get into trouble': '곤경에 빠지다',
-    'handprint': '손자국',
-    'horror': '공포',
-    'lightning': '번개',
-    'look for': '~을 찾다',
-    'mop': '대걸레로 닦다',
-    'post': '게시하다, 공고하다',
-    'principal': '교장',
-    'run across': '~을 가로질러[건너서] 뛰다',
-    'rush': '(급히) 움직이다, 서두르다',
-    'rush over': '달려가다',
-    'silver': '은',
-    'steal': '훔치다',
-    'strange': '이상한',
-    'stranger': '낯선 사람, 모르는 사람',
-    'suddenly': '갑자기',
-    'take care of': '~을 돌보다',
-    'talent': '재능',
-    'talent show': '장기 자랑 대회',
-    'thief': '도둑',
-    'thunder': '천둥',
-    'treasure': '보물',
-    'water': '물을 주다',
-    'win first place': '일등을 하다',
-    'witch': '마녀',
-    'wonder': '궁금해 하다'
+    'adventure': '모험',
+    'advertisement': '광고',
+    'award': '상',
+    'based on': '~을 바탕으로',
+    'belief': '신념, 생각',
+    'boring': '지루한',
+    'check out': '~을 확인하다',
+    'connection': '관련성',
+    'difference': '차이점',
+    'especially': '특히',
+    'explain': '설명하다',
+    'express': '나타내다, 표현하다',
+    'fantasy': '공상',
+    'for example': '예를 들면',
+    'friendship': '우정',
+    'from now on': '지금부터',
+    'full of': '~로 가득 찬',
+    'hold on': '기다려, 멈춰',
+    'lie': '거짓말하다',
+    'lift': '들어 올리다',
+    'main character': '주인공',
+    'make a choice': '선택하다',
+    'meal': '식사',
+    'mix': '섞다',
+    'navy': '남색(의)',
+    'opinion': '의견',
+    'pocket': '주머니',
+    'prove': '증명하다',
+    'purple': '보라색, 자색',
+    'recommend': '추천하다',
+    'right now': '지금',
+    'simple': '간단한, 단순한',
+    'strongly': '강력하게',
+    'touching': '감동적인',
+    'traditional': '전통적인',
+    'trust': '신뢰하다, 믿다',
+    'truth': '진실, 사실',
+    'unlike': '~와는 달리',
+    'wisely': '현명하게',
+    'worth': '가치가 있는'
   };
 
   // ===== 유틸 =====
@@ -238,18 +238,26 @@
       return el;
     }
     function forceClick(el) {
-      const target = getClickable(el);
-      const prev = target.style.pointerEvents;
-      const prevZ = target.style.zIndex;
-      target.style.pointerEvents = 'auto';
-      target.style.zIndex = '9999';
-      const rect = target.getBoundingClientRect();
-      const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
-      ['mouseover','mousemove','mousedown','mouseup','click'].forEach(type => {
-        target.dispatchEvent(new MouseEvent(type, {bubbles:true,cancelable:true,clientX:cx,clientY:cy}));
-      });
-      target.style.pointerEvents = prev;
-      target.style.zIndex = prevZ;
+      try {
+        const target = getClickable(el);
+        const prev = target.style.pointerEvents;
+        const prevZ = target.style.zIndex;
+        target.style.pointerEvents = 'auto';
+        target.style.zIndex = '9999';
+        const rect = target.getBoundingClientRect();
+        const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
+        ['mouseover','mousemove','mousedown','mouseup','click'].forEach(type => {
+          try {
+            target.dispatchEvent(new MouseEvent(type, {bubbles:true,cancelable:true,clientX:cx,clientY:cy}));
+          } catch (e) {
+            // 개별 이벤트 오류 무시
+          }
+        });
+        target.style.pointerEvents = prev;
+        target.style.zIndex = prevZ;
+      } catch (e) {
+        // 전체 클릭 오류 무시
+      }
     }
 
     // 왼쪽 영어-오른쪽 한국어 중 첫 가능한 한 쌍을 찾아 강제 클릭
@@ -265,24 +273,31 @@
     
     // 시드 기반 사용
     const map = new Map(Object.entries({
-      'afraid':'걱정하는, 두려워하는','anyway':'어차피','broken':'깨진, 부서진','bronze':'청동',
-      'carry':'나르다, 옮기다','clue':'단서, 실마리','crime':'범죄','dangerous':'위험한','detective':'탐정',
-      'else':'또 다른','favor':'호의, 친절; 부탁','feather':'깃털','flash':'섬광, 번쩍임','footprint':'발자국',
-      'get into trouble':'곤경에 빠지다','handprint':'손자국','horror':'공포','lightning':'번개',
-      'look for':'~을 찾다','mop':'대걸레로 닦다','post':'게시하다, 공고하다','principal':'교장',
-      'run across':'~을 가로질러[건너서] 뛰다','rush':'(급히) 움직이다, 서두르다','rush over':'달려가다',
-      'silver':'은','steal':'훔치다','strange':'이상한','stranger':'낯선 사람, 모르는 사람',
-      'suddenly':'갑자기','take care of':'~을 돌보다','talent':'재능','talent show':'장기 자랑 대회',
-      'thief':'도둑','thunder':'천둥','treasure':'보물','water':'물을 주다','win first place':'일등을 하다',
-      'witch':'마녀','wonder':'궁금해 하다'
+      'adventure':'모험','advertisement':'광고','award':'상','based on':'~을 바탕으로',
+      'belief':'신념, 생각','boring':'지루한','check out':'~을 확인하다','connection':'관련성',
+      'difference':'차이점','especially':'특히','explain':'설명하다','express':'나타내다, 표현하다',
+      'fantasy':'공상','for example':'예를 들면','friendship':'우정','from now on':'지금부터',
+      'full of':'~로 가득 찬','hold on':'기다려, 멈춰','lie':'거짓말하다','lift':'들어 올리다',
+      'main character':'주인공','make a choice':'선택하다','meal':'식사','mix':'섞다',
+      'navy':'남색(의)','opinion':'의견','pocket':'주머니','prove':'증명하다',
+      'purple':'보라색, 자색','recommend':'추천하다','right now':'지금','simple':'간단한, 단순한',
+      'strongly':'강력하게','touching':'감동적인','traditional':'전통적인','trust':'신뢰하다, 믿다',
+      'truth':'진실, 사실','unlike':'~와는 달리','wisely':'현명하게','worth':'가치가 있는'
     }));
     
     for (const e of lefts) {
       const ko = map.get(e.t.trim().toLowerCase());
       if (!ko) continue;
-      const candidates = rights.filter(k => k.t.trim() === ko);
+      // 공백/줄바꿈/콤마를 무시하고 비교
+      const normKR = (s) => (s || '').toLowerCase().replace(/[\s,·]+/g, '');
+      const targetNorm = normKR(ko);
+      const candidates = rights.filter(k => normKR(k.t.trim()) === targetNorm);
       if (!candidates.length) continue;
       const k = candidates.sort((a,b)=>Math.abs(a.top-e.top)-Math.abs(b.top-e.top))[0];
+      
+      // 연속으로 같은 쌍을 클릭하지 않도록 확인
+      const pairKey = `${e.t.trim().toLowerCase()}|${k.t.trim()}`;
+      if (state.lastClickedPair === pairKey) continue;
       
       // 클릭 전에 요소가 여전히 존재하고 보이는지 확인
       if (!e.el.isConnected || !k.el.isConnected) continue;
@@ -290,10 +305,11 @@
       const kRect = k.el.getBoundingClientRect();
       if (eRect.width === 0 || eRect.height === 0 || kRect.width === 0 || kRect.height === 0) continue;
       
+      // 마지막 클릭한 쌍을 기록
+      state.lastClickedPair = pairKey;
+      
       forceClick(e.el);
-      setTimeout(()=>{
-        if (k.el.isConnected) forceClick(k.el);
-      }, 120);
+      forceClick(k.el);
       log('pair clicked:', e.t, '→', k.t);
       return true;
     }
@@ -301,26 +317,61 @@
   }
 
   // 토글 가능하도록 window에 노출
-  const state = { timer: null, running: false };
+  const state = { timer: null, running: false, lastClickedPair: null };
   const start = () => {
     if (state.running) return;
     state.running = true;
-    state.timer = setInterval(async () => {
+    
+    // 단어 블록(영/한)이 화면에 나타날 때까지 대기한 뒤 2초 지연 후 시작
+    const hasWordBlocks = () => {
+      const blocks = [...document.querySelectorAll('div')].map(el => {
+        const t = (el.textContent||'').trim();
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        if (!t || s.display==='none' || s.visibility==='hidden' || s.opacity==='0' || r.width<120 || r.height<40) return null;
+        return { t, isKo: /[가-힣]/.test(t) };
+      }).filter(Boolean);
+      const lefts = blocks.filter(b => !b.isKo);
+      const rights = blocks.filter(b => b.isKo);
+      return lefts.length > 0 && rights.length > 0;
+    };
+    
+    const runLoop = async () => {
+      if (!state.running) return;
+      
       // 블록 기반 쌍 매칭만 사용 (프롬프트 기반 로직 완전 비활성화)
       const success = await clickVisiblePairIfAny();
       if (success) {
-        // 매칭 성공 시 짧은 대기 후 즉시 다음 쌍을 찾기
-        await sleep(100);
+        // 매칭 성공 시 1.4초 대기 후 다음 쌍을 찾기
+        await sleep(200);
+      } else {
+        // 실패 시에도 최소 1초는 대기 (너무 빠른 스캔 방지)
+        await sleep(3000);
       }
-      // 실패해도 계속 실행 (상시 모니터링)
-    }, INTERVAL_MS);
+      
+      // 다음 루프 예약
+      if (state.running) {
+        state.timer = setTimeout(runLoop, 100);
+      }
+    };
+    
+    (async () => {
+      for (let i = 0; i < 50 && !hasWordBlocks(); i++) {
+        await sleep(200);
+      }
+      if (hasWordBlocks()) await sleep(2000); // 시작 전 2초 대기
+      runLoop();
+    })();
     console.log('[Classcard Auto-Clicker] started');
   };
   const stop = () => {
     if (!state.running) return;
-    clearInterval(state.timer);
-    state.timer = null;
     state.running = false;
+    if (state.timer) {
+      clearTimeout(state.timer);
+      state.timer = null;
+    }
+    state.lastClickedPair = null; // 마지막 클릭 기록 초기화
     console.log('[Classcard Auto-Clicker] stopped');
   };
 
